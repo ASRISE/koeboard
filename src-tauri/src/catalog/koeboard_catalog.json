@@ -5,8 +5,8 @@
       "id": "parakeet-tdt_ctc-0.6b-ja",
       "name": "Parakeet TDT-CTC 0.6B Japanese",
       "description": "Japanese-only. Fast and accurate; converted from nvidia/parakeet-tdt_ctc-0.6b-ja.",
-      "repository": "ASRISE/parakeet-tdt_ctc-0.6b-ja-gguf",
-      "revision": "main",
+      "repository": "ASRISEx/parakeet-tdt_ctc-0.6b-ja-gguf",
+      "revision": "9ac30ce2f51e603770b7b6b6cbfee77774286482",
       "family": "parakeet",
       "languages": ["ja"],
       "capabilities": {
