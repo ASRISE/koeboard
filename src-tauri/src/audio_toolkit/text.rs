@@ -323,6 +323,47 @@ fn gated_filler_words_for_language(lang: &str) -> &'static [&'static str] {
     }
 }
 
+/// Japanese fillers. Japanese has no spaces between words, so the `\b`-based
+/// patterns above never match. A filler is only removed at the start of the
+/// text or right after punctuation/whitespace, and ambiguous forms are only
+/// removed when a comma follows (「あの、」 is a filler, 「あの店」 is not).
+static JA_FILLER_PATTERN: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(
+        r"(^|[。、！？!?\s])(?:(?:え[ーっ]*と|えー+|あのー+|うー+ん|んー+)[ー〜っ]*[、,]?|あの[、,])\s*",
+    )
+    .unwrap()
+});
+static JA_REPEATED_COMMA: Lazy<Regex> = Lazy::new(|| Regex::new(r"[、,]{2,}").unwrap());
+static JA_LEADING_COMMA: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(^|[。！？!?]\s*)[、,]\s*").unwrap());
+
+fn contains_kana(text: &str) -> bool {
+    text.chars()
+        .any(|c| matches!(c, '\u{3041}'..='\u{3096}' | '\u{30A1}'..='\u{30FA}'))
+}
+
+/// Removes Japanese fillers such as 「えーと」「あのー」. Applied when the output
+/// language is Japanese, or unknown but the text contains kana.
+fn remove_japanese_fillers(text: &str) -> String {
+    let mut result = text.to_string();
+    // Back-to-back fillers share a boundary character, so repeat until stable.
+    loop {
+        let next = JA_FILLER_PATTERN.replace_all(&result, "$1").into_owned();
+        if next == result {
+            break;
+        }
+        result = next;
+    }
+    result = JA_REPEATED_COMMA.replace_all(&result, "、").into_owned();
+    result = JA_LEADING_COMMA.replace_all(&result, "$1").into_owned();
+    let trimmed = result.trim();
+    if trimmed.is_empty() {
+        text.to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
 static MULTI_SPACE_PATTERN: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s{2,}").unwrap());
 
 /// Collapses repeated words (3+ repetitions) to a single instance.
@@ -460,6 +501,16 @@ pub fn remove_filler_words(
         filtered = remove_filler_matches(&filtered, pattern);
     }
 
+    if custom_filler_words.is_none() {
+        let is_japanese = match language.language() {
+            Some(lang) => lang.split(&['-', '_'][..]).next() == Some("ja"),
+            None => contains_kana(&filtered),
+        };
+        if is_japanese {
+            filtered = remove_japanese_fillers(&filtered);
+        }
+    }
+
     filtered
 }
 
@@ -539,6 +590,28 @@ mod tests {
         let custom_words = vec![];
         let result = apply_custom_words(text, &custom_words, 0.5);
         assert_eq!(result, "hello world");
+    }
+
+    #[test]
+    fn test_filter_japanese_fillers() {
+        let cases = [
+            ("えーと、明日の会議は午後3時からです。", "明日の会議は午後3時からです。"),
+            ("えーと明日の会議は午後3時からです", "明日の会議は午後3時からです"),
+            ("あのー、資料はあの店で買いました。", "資料はあの店で買いました。"),
+            ("それで、えー、来週にします。", "それで、来週にします。"),
+            ("えーと、あのー、すみません。", "すみません。"),
+            ("あの人に聞いてください。", "あの人に聞いてください。"),
+            ("ええ、そうです。", "ええ、そうです。"),
+        ];
+        for (input, expected) in cases {
+            assert_eq!(filter_transcription_output(input, "ja", &None), expected, "{input}");
+        }
+    }
+
+    #[test]
+    fn test_filter_japanese_fillers_skip_other_languages() {
+        // Without kana and with a non-Japanese language, nothing changes.
+        assert_eq!(filter_transcription_output("hello world", "en", &None), "hello world");
     }
 
     #[test]
