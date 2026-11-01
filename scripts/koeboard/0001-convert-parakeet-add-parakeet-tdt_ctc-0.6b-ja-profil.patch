@@ -1,0 +1,39 @@
+From d8a1b2ab7c436d5521f7e8cd36d6ec1490106fb7 Mon Sep 17 00:00:00 2001
+From: Asahi <87749135+YoshiokaAsahi@users.noreply.github.com>
+Date: Sun, 1 Nov 2026 22:29:50 +0900
+Subject: [PATCH] convert-parakeet: add parakeet-tdt_ctc-0.6b-ja profile
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ scripts/convert-parakeet.py | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/scripts/convert-parakeet.py b/scripts/convert-parakeet.py
+index 13faba2..41f0792 100644
+--- a/scripts/convert-parakeet.py
++++ b/scripts/convert-parakeet.py
+@@ -339,6 +339,21 @@ VARIANT_PROFILES: dict[str, dict] = {
+         "license_name": "Creative Commons Attribution 4.0",
+         "license_link": "https://creativecommons.org/licenses/by/4.0/",
+     },
++    # 0.6B Japanese hybrid TDT+CTC (ReazonSpeech v2.0). Same TDT-only
++    # shipping decision as the English hybrids; 3072-token Japanese SPM.
++    "parakeet-tdt_ctc-0.6b-ja": {
++        "variant": "tdt_ctc-0.6b-ja",
++        "display_name": "Parakeet TDT-CTC 0.6B Japanese",
++        "version": "v1",
++        "size_label": "0.6B",
++        "head_kind": "tdt",
++        "expected_vocab_size": 3072,
++        "languages": ["ja"],
++        "lang_detect": False,
++        "license": "cc-by-4.0",
++        "license_name": "Creative Commons Attribution 4.0",
++        "license_link": "https://creativecommons.org/licenses/by/4.0/",
++    },
+     # 1.1B English hybrid TDT+CTC. Same TDT-only shipping decision.
+     # Marked `prefer_direct_load=True` so the converter bypasses
+     # NeMo's restore_from() extraction (~4.4 GB transient disk) and
+-- 
+2.54.0 (Apple Git-157)
+

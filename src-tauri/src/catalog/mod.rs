@@ -40,6 +40,8 @@ const MIRRORS: &[&str] = &["https://blob.handy.computer"];
 /// `(id, rank, recommended)`: rank is the editorial sort position (lower =
 /// higher); recommended is the small badged onboarding subset.
 const HANDY_RANKING: &[(&str, u32, bool)] = &[
+    // Koeboard: Japanese first.
+    ("parakeet-tdt_ctc-0.6b-ja", 0, true),
     ("parakeet-unified-en-0.6b", 1, true),
     ("nemotron-3.5-asr-streaming-0.6b", 2, true),
     ("canary-180m-flash", 3, true),
@@ -305,14 +307,27 @@ impl From<&CatalogModel> for ModelDescriptor {
 /// stays out of [`ModelDescriptor`] (mirrors, results) can
 /// be looked up separately.
 static ROOT: Lazy<CatalogRoot> = Lazy::new(|| {
-    let root: CatalogRoot = serde_json::from_str(include_str!("catalog.json"))
+    let mut root: CatalogRoot = serde_json::from_str(include_str!("catalog.json"))
         .expect("bundled catalog.json is valid JSON matching the catalog schema");
     assert_eq!(
         root.schema, SCHEMA,
         "bundled catalog.json has an unsupported schema"
     );
+    // Koeboard: models we publish ourselves (e.g. Japanese Parakeet), kept in a
+    // separate file so catalog.json stays a verbatim upstream copy.
+    let extra: KoeboardCatalog = serde_json::from_str(include_str!("koeboard_catalog.json"))
+        .expect("bundled koeboard_catalog.json is valid JSON");
+    let known: HashSet<String> = root.models.iter().map(|m| m.id.clone()).collect();
+    root.models
+        .extend(extra.models.into_iter().filter(|m| !known.contains(&m.id)));
     root
 });
+
+/// Koeboard's own additions to the catalog (`koeboard_catalog.json`).
+#[derive(Deserialize)]
+struct KoeboardCatalog {
+    models: Vec<CatalogModel>,
+}
 
 /// Transcription models: the only role Handy can load. Language ID, VAD and
 /// diarization models are published alongside them but produce no text.

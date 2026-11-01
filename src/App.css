@@ -265,6 +265,14 @@
   fill: var(--color-wordmark);
 }
 
+.logo-key {
+  fill: var(--color-logo-primary);
+}
+
+.logo-bar {
+  fill: #ffffff;
+}
+
 .logo-stroke {
   fill: var(--color-wordmark-stroke);
   stroke: var(--color-wordmark-stroke);

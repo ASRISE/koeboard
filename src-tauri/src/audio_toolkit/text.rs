@@ -595,23 +595,39 @@ mod tests {
     #[test]
     fn test_filter_japanese_fillers() {
         let cases = [
-            ("えーと、明日の会議は午後3時からです。", "明日の会議は午後3時からです。"),
-            ("えーと明日の会議は午後3時からです", "明日の会議は午後3時からです"),
-            ("あのー、資料はあの店で買いました。", "資料はあの店で買いました。"),
+            (
+                "えーと、明日の会議は午後3時からです。",
+                "明日の会議は午後3時からです。",
+            ),
+            (
+                "えーと明日の会議は午後3時からです",
+                "明日の会議は午後3時からです",
+            ),
+            (
+                "あのー、資料はあの店で買いました。",
+                "資料はあの店で買いました。",
+            ),
             ("それで、えー、来週にします。", "それで、来週にします。"),
             ("えーと、あのー、すみません。", "すみません。"),
             ("あの人に聞いてください。", "あの人に聞いてください。"),
             ("ええ、そうです。", "ええ、そうです。"),
         ];
         for (input, expected) in cases {
-            assert_eq!(filter_transcription_output(input, "ja", &None), expected, "{input}");
+            assert_eq!(
+                filter_transcription_output(input, "ja", &None),
+                expected,
+                "{input}"
+            );
         }
     }
 
     #[test]
     fn test_filter_japanese_fillers_skip_other_languages() {
         // Without kana and with a non-Japanese language, nothing changes.
-        assert_eq!(filter_transcription_output("hello world", "en", &None), "hello world");
+        assert_eq!(
+            filter_transcription_output("hello world", "en", &None),
+            "hello world"
+        );
     }
 
     #[test]

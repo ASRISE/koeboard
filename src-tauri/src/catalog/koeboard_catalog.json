@@ -1,0 +1,30 @@
+{
+  "_comment": "Koeboard-only models, merged into the upstream catalog.json at load. Same shape as catalog.json's models[]. Kept separate so catalog.json stays a verbatim copy of @handy-computer/models.",
+  "models": [
+    {
+      "id": "parakeet-tdt_ctc-0.6b-ja",
+      "name": "Parakeet TDT-CTC 0.6B Japanese",
+      "description": "Japanese-only. Fast and accurate; converted from nvidia/parakeet-tdt_ctc-0.6b-ja.",
+      "repository": "ASRISE/parakeet-tdt_ctc-0.6b-ja-gguf",
+      "revision": "main",
+      "family": "parakeet",
+      "languages": ["ja"],
+      "capabilities": {
+        "streaming": false,
+        "translate": false,
+        "languageDetection": false,
+        "timestamps": true
+      },
+      "quant": "Q8_0",
+      "role": "asr",
+      "minEngine": "0.2.4",
+      "files": {
+        "Q8_0": {
+          "filename": "parakeet-tdt_ctc-0.6b-ja-Q8_0.gguf",
+          "size": 732523296,
+          "sha256": "fb9b510f24beba192c13987207b124b907e8320629894e753faa2ba883075cf7"
+        }
+      }
+    }
+  ]
+}
