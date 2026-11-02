@@ -682,6 +682,10 @@
         "cancel": "取消",
         "selectToEdit": "選擇上方的提示詞以檢視和編輯其詳細資訊",
         "createFirst": "點選上方的「建立新提示詞」來建立您的第一個後處理提示詞"
+      },
+      "onDictation": {
+        "label": "Clean up on every dictation",
+        "description": "Run the AI cleanup when you use the main recording shortcut too, not only the post-processing shortcut."
       }
     },
     "history": {

@@ -682,6 +682,10 @@
         "cancel": "İptal",
         "selectToEdit": "Ayrıntılarını görüntülemek ve düzenlemek için yukarıdan bir prompt seçin.",
         "createFirst": "İlk son işlem promptunuzu oluşturmak için yukarıdaki “Yeni Prompt Oluştur” seçeneğine tıklayın."
+      },
+      "onDictation": {
+        "label": "Clean up on every dictation",
+        "description": "Run the AI cleanup when you use the main recording shortcut too, not only the post-processing shortcut."
       }
     },
     "history": {

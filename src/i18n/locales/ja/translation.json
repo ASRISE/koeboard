@@ -13,7 +13,7 @@
     "general": "一般",
     "models": "モデル",
     "advanced": "詳細設定",
-    "postProcessing": "後処理",
+    "postProcessing": "AI で整える",
     "history": "履歴",
     "debug": "デバッグ",
     "about": "概要"
@@ -682,6 +682,10 @@
         "cancel": "キャンセル",
         "selectToEdit": "上からプロンプトを選択して、詳細を表示・編集します。",
         "createFirst": "上の「新しいプロンプトを作成」をクリックして、最初の後処理プロンプトを作成してください。"
+      },
+      "onDictation": {
+        "label": "いつもの録音キーでも整える",
+        "description": "後処理用のキーだけでなく、いつもの録音キーで話したときも AI で整えます。"
       }
     },
     "history": {
@@ -802,8 +806,8 @@
         "description": "ノートパソコンの蓋を閉じたときに使用するマイク"
       },
       "postProcessingToggle": {
-        "label": "後処理",
-        "description": "文字起こし後の AI によるテキスト改善を有効化"
+        "label": "AI で整える",
+        "description": "話し終わったあと、AI で言い間違いやいらない文を消して整えます。設定は左の「後処理」から。"
       },
       "muteWhileRecording": {
         "label": "録音中にミュート",

@@ -682,6 +682,10 @@
         "cancel": "Cancel",
         "selectToEdit": "Select a prompt above to view and edit its details.",
         "createFirst": "Click 'Create New Prompt' above to create your first post-processing prompt."
+      },
+      "onDictation": {
+        "label": "Clean up on every dictation",
+        "description": "Run the AI cleanup when you use the main recording shortcut too, not only the post-processing shortcut."
       }
     },
     "history": {
@@ -802,8 +806,8 @@
         "description": "Microphone to use when laptop lid is closed"
       },
       "postProcessingToggle": {
-        "label": "Post Processing",
-        "description": "Enable AI-powered text refinement after transcription"
+        "label": "AI cleanup",
+        "description": "After you finish speaking, an AI removes self-corrections and stray sentences. Configure it under Post Process."
       },
       "muteWhileRecording": {
         "label": "Mute While Recording",

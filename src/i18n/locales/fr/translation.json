@@ -682,6 +682,10 @@
         "cancel": "Annuler",
         "selectToEdit": "Sélectionnez un prompt ci-dessus pour voir et modifier ses détails.",
         "createFirst": "Cliquez sur 'Créer un nouveau prompt' ci-dessus pour créer votre premier prompt de post-traitement."
+      },
+      "onDictation": {
+        "label": "Clean up on every dictation",
+        "description": "Run the AI cleanup when you use the main recording shortcut too, not only the post-processing shortcut."
       }
     },
     "history": {

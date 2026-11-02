@@ -8,7 +8,10 @@ use crate::managers::model::ModelManager;
 use crate::managers::transcription::policy::{live_decode, LiveDecode, ModelTraits};
 use crate::managers::transcription::StreamWorkKind;
 use crate::managers::transcription::{Transcription, TranscriptionManager};
-use crate::settings::{get_settings, AppSettings, OverlayStyle, APPLE_INTELLIGENCE_PROVIDER_ID};
+use crate::settings::{
+    get_settings, AppSettings, OverlayStyle, APPLE_INTELLIGENCE_PROVIDER_ID,
+    KOEBOARD_CLEANUP_PROMPT_ID,
+};
 use crate::shortcut;
 use crate::tray::{set_tray_state, TrayIconState};
 use crate::utils::{
@@ -134,6 +137,32 @@ fn strip_think_block(s: &str) -> &str {
         }
     }
     s
+}
+
+/// Whether `cleaned` is (nearly) only characters taken from `original`: what a
+/// cleanup that deletes self-corrections and fillers produces. Punctuation and
+/// whitespace are ignored, since the cleanup may add them.
+fn is_deletion_only(original: &str, cleaned: &str) -> bool {
+    use std::collections::HashMap;
+    let significant = |c: &char| {
+        !c.is_whitespace()
+            && !c.is_ascii_punctuation()
+            && !"、。，．！？「」『』（）・…〜ー".contains(*c)
+    };
+    let mut available: HashMap<char, usize> = HashMap::new();
+    for c in original.chars().filter(significant) {
+        *available.entry(c).or_default() += 1;
+    }
+    let mut total = 0usize;
+    let mut borrowed = 0usize;
+    for c in cleaned.chars().filter(significant) {
+        total += 1;
+        if let Some(n) = available.get_mut(&c).filter(|n| **n > 0) {
+            *n -= 1;
+            borrowed += 1;
+        }
+    }
+    total == 0 || borrowed as f64 / total as f64 >= 0.9
 }
 
 /// Build a system prompt from the user's prompt template.
@@ -418,7 +447,21 @@ pub(crate) async fn process_transcription_output(
     let mut post_process_prompt: Option<String> = None;
 
     if post_process {
-        if let Some(processed_text) = post_process_transcription(&settings, &final_text).await {
+        let processed = post_process_transcription(&settings, &final_text)
+            .await
+            .filter(|processed| {
+                // Koeboard: the cleanup prompt only deletes. Output made of
+                // words the speaker never said is an answer or an invention
+                // (small local models do this); keep what was said instead.
+                let is_cleanup = settings.post_process_selected_prompt_id.as_deref()
+                    == Some(KOEBOARD_CLEANUP_PROMPT_ID);
+                let kept = !is_cleanup || is_deletion_only(&final_text, processed);
+                if !kept {
+                    warn!("Cleanup output adds words that weren't said; keeping the transcript");
+                }
+                kept
+            });
+        if let Some(processed_text) = processed {
             post_processed_text = Some(processed_text.clone());
             final_text = processed_text;
 
@@ -658,7 +701,11 @@ impl ShortcutAction for TranscribeAction {
         play_feedback_sound(app, SoundType::Stop);
 
         let binding_id = binding_id.to_string(); // Clone binding_id for the async task
-        let post_process = self.post_process;
+                                                 // Koeboard: with post-processing on, the main shortcut cleans up too.
+        let post_process = self.post_process || {
+            let settings = get_settings(app);
+            settings.post_process_enabled && settings.post_process_on_dictation
+        };
         let cancel_generation = rm.cancel_generation();
 
         tauri::async_runtime::spawn(async move {
@@ -988,8 +1035,8 @@ pub static ACTION_MAP: Lazy<HashMap<String, Arc<dyn ShortcutAction>>> = Lazy::ne
 #[cfg(test)]
 mod tests {
     use super::{
-        complete_unless_cancelled, is_blank_transcription, should_use_streaming_overlay,
-        strip_think_block,
+        complete_unless_cancelled, is_blank_transcription, is_deletion_only,
+        should_use_streaming_overlay, strip_think_block,
     };
     use crate::settings::OverlayStyle;
     use std::future;
@@ -997,6 +1044,34 @@ mod tests {
     use std::sync::Arc;
     use std::thread;
     use std::time::Duration;
+
+    #[test]
+    fn cleanup_that_only_deletes_is_kept() {
+        assert!(is_deletion_only(
+            "えーと明日の会議は10時からじゃなくて11時からに変更になりましたよろしくお願いします",
+            "明日の会議は11時からに変更になりました。よろしくお願いします。"
+        ));
+        assert!(is_deletion_only(
+            "資料は田中さんに、いや佐藤さんに送ってください",
+            "資料は佐藤さんに送ってください。"
+        ));
+        assert!(is_deletion_only(
+            "Let's meet on Monday, no wait, Tuesday at 3",
+            "Let's meet on Tuesday at 3."
+        ));
+    }
+
+    #[test]
+    fn cleanup_that_answers_or_invents_is_rejected() {
+        assert!(!is_deletion_only(
+            "あのーこれってどうやって設定するんですかね",
+            "はい、設定方法は以下の通りです。"
+        ));
+        assert!(!is_deletion_only(
+            "今日の天気を教えて",
+            "今日の天気がいいので散歩に行こうと思います。"
+        ));
+    }
 
     #[test]
     fn blank_transcription_is_detected() {

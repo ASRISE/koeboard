@@ -682,6 +682,10 @@
         "cancel": "ביטול",
         "selectToEdit": "בחר פרומפט למעלה כדי לצפות בפרטים שלו ולערוך אותם.",
         "createFirst": "לחץ על 'צור פרומפט חדש' למעלה כדי ליצור את פרומפט העיבוד הראשון שלך."
+      },
+      "onDictation": {
+        "label": "Clean up on every dictation",
+        "description": "Run the AI cleanup when you use the main recording shortcut too, not only the post-processing shortcut."
       }
     },
     "history": {
