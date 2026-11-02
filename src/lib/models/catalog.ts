@@ -2,9 +2,9 @@
  * Grades, speeds and picks from @handy-computer/models (the same catalog as
  * src-tauri/src/catalog/catalog.json).
  */
+import { catalog } from "./koeboardCatalog";
 import {
   accuracyGrade,
-  catalog,
   languageIdentity,
   modelMatchesLanguage,
   type CatalogModel,

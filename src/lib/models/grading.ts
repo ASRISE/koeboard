@@ -1,5 +1,5 @@
+import { catalog } from "./koeboardCatalog";
 import {
-  catalog,
   modelMatchesLanguage,
   type CatalogModel,
   type MachineTier,

@@ -1,14 +1,19 @@
 {
-  "_comment": "Koeboard-only models, merged into the upstream catalog.json at load. Same shape as catalog.json's models[]. Kept separate so catalog.json stays a verbatim copy of @handy-computer/models.",
+  "_comment": "Koeboard-only models, merged into the upstream catalog.json at load (Rust: catalog/mod.rs, frontend: src/lib/models/koeboardCatalog.ts). Same shape as catalog.json's models[] and results{}. Kept separate so catalog.json stays a verbatim copy of @handy-computer/models.",
   "models": [
     {
       "id": "parakeet-tdt_ctc-0.6b-ja",
       "name": "Parakeet TDT-CTC 0.6B Japanese",
-      "description": "Japanese-only. Fast and accurate; converted from nvidia/parakeet-tdt_ctc-0.6b-ja.",
+      "description": "Japanese only. Fast, with good accuracy; converted from nvidia/parakeet-tdt_ctc-0.6b-ja.",
       "repository": "ASRISEx/parakeet-tdt_ctc-0.6b-ja-gguf",
       "revision": "9ac30ce2f51e603770b7b6b6cbfee77774286482",
+      "previousRevisions": [],
+      "license": "cc-by-4.0",
       "family": "parakeet",
-      "languages": ["ja"],
+      "parameters": "0.6B",
+      "languages": [
+        "ja"
+      ],
       "capabilities": {
         "streaming": false,
         "translate": false,
@@ -17,6 +22,7 @@
       },
       "quant": "Q8_0",
       "role": "asr",
+      "curated": true,
       "minEngine": "0.2.4",
       "files": {
         "Q8_0": {
@@ -26,5 +32,20 @@
         }
       }
     }
-  ]
+  ],
+  "_results_note": "ja: FLEURS test, 650 utterances, Q8_0, transcribe.cpp scripts/wer (run.py + score.py, CER), measured 2026-11-02 on Apple M4 Metal; same pipeline reproduces SenseVoiceSmall's published 7.63% as 7.62%. performance: not measured on the benchmark machine; copied from parakeet-tdt-0.6b-v3 (same 0.6B FastConformer encoder; encode time on M4 within 5%).",
+  "results": {
+    "parakeet-tdt_ctc-0.6b-ja": {
+      "accuracy": {
+        "ja": {
+          "error": 5.95,
+          "ciLower": 5.22
+        }
+      },
+      "performance": {
+        "accelerated": 25.065,
+        "cpu": 13.655
+      }
+    }
+  }
 }

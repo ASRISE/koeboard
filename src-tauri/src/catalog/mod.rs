@@ -318,6 +318,11 @@ static ROOT: Lazy<CatalogRoot> = Lazy::new(|| {
     let extra: KoeboardCatalog = serde_json::from_str(include_str!("koeboard_catalog.json"))
         .expect("bundled koeboard_catalog.json is valid JSON");
     let known: HashSet<String> = root.models.iter().map(|m| m.id.clone()).collect();
+    for (id, results) in extra.results {
+        if !known.contains(&id) {
+            root.results.entry(id).or_insert(results);
+        }
+    }
     root.models
         .extend(extra.models.into_iter().filter(|m| !known.contains(&m.id)));
     root
@@ -327,6 +332,9 @@ static ROOT: Lazy<CatalogRoot> = Lazy::new(|| {
 #[derive(Deserialize)]
 struct KoeboardCatalog {
     models: Vec<CatalogModel>,
+    /// Benchmark results for these models, same shape as catalog.json's.
+    #[serde(default)]
+    results: HashMap<String, ModelResults>,
 }
 
 /// Transcription models: the only role Handy can load. Language ID, VAD and
