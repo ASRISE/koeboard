@@ -50,5 +50,7 @@ jobs:
       upload-artifacts: true
       # Koeboard has no Apple Developer ID or Windows signing certificate yet.
       sign-binaries: false
+      # Updater artifacts are always built, so the build needs the updater key.
+      sign-updater: true
       asset-prefix: "koeboard"
     secrets: inherit
