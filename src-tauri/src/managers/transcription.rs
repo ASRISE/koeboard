@@ -1321,6 +1321,10 @@ fn run_setup(info: &LoadedInfo, settings: &AppSettings, language: LanguageDecisi
         language: run_plan.language,
         target_language: run_plan.target_language,
         vocabulary: vocabulary_for_model(info.supports_vocabulary, &settings.custom_words),
+        // Koeboard: the text before the cursor, for models that take context.
+        prompt: (info.supports_context_prompt && settings.use_cursor_context)
+            .then(crate::text_context::current)
+            .flatten(),
         ..Default::default()
     };
 

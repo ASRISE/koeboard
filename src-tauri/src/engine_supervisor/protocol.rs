@@ -157,6 +157,9 @@ pub struct LoadedInfo {
     /// run (whisper today); other models' long audio is chunked by Handy.
     pub supports_long_form: bool,
     pub supports_vocabulary: bool,
+    /// Koeboard: `RunOptions::prompt` conditions the transcription.
+    #[serde(default)]
+    pub supports_context_prompt: bool,
 }
 
 /// Encode one frame. Refuses a section the reader would refuse, so an

@@ -260,6 +260,19 @@ async fn post_process_transcription(settings: &AppSettings, transcription: &str)
         return None;
     }
 
+    // Koeboard: the cleanup sees the text before the cursor, to keep names and
+    // terms consistent with it. It is reference only, never output.
+    let prompt = match crate::text_context::current() {
+        Some(context)
+            if settings.use_cursor_context && selected_prompt_id == KOEBOARD_CLEANUP_PROMPT_ID =>
+        {
+            format!(
+                "{prompt}\n\n参考：入力先でカーソルより前に書いてある文です。固有名詞や用語の表記をこれに合わせてください。この文自体は出力に含めないでください。\n<context>\n{context}\n</context>"
+            )
+        }
+        _ => prompt,
+    };
+
     debug!(
         "Starting LLM post-processing with provider '{}' (model: {})",
         provider.id, model
@@ -527,6 +540,12 @@ impl ShortcutAction for TranscribeAction {
         let plan_started = Instant::now();
         let settings = get_settings(app);
         let is_always_on = settings.always_on_microphone;
+        // Koeboard: read the text before the cursor while the mic opens.
+        if settings.use_cursor_context {
+            crate::text_context::capture();
+        } else {
+            crate::text_context::clear();
+        }
 
         let selected_model_info = app
             .state::<Arc<ModelManager>>()

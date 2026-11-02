@@ -169,6 +169,8 @@ const settingUpdaters: {
   mute_while_recording: (value) =>
     commands.changeMuteWhileRecordingSetting(value as boolean),
   live_preview: (value) => commands.changeLivePreviewSetting(value as boolean),
+  use_cursor_context: (value) =>
+    commands.changeUseCursorContextSetting(value as boolean),
   post_process_on_dictation: (value) =>
     commands.changePostProcessOnDictationSetting(value as boolean),
   append_trailing_space: (value) =>

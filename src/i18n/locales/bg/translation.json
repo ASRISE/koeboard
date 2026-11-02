@@ -623,6 +623,10 @@
       "livePreview": {
         "label": "Show text while speaking",
         "description": "With the live overlay, show what you've said so far even when the model can't stream. Uses a little more processing while you record."
+      },
+      "cursorContext": {
+        "label": "Use the text before the cursor",
+        "description": "When you start recording, read up to 200 characters before the cursor and use them as context, so names and terms match what's already written. Password fields are never read. Mac and Windows."
       }
     },
     "postProcessing": {

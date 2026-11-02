@@ -499,6 +499,10 @@ pub struct AppSettings {
     /// model that can't stream, by re-decoding the recording so far.
     #[serde(default = "default_live_preview")]
     pub live_preview: bool,
+    /// Koeboard: read the text before the cursor when recording starts and
+    /// give it to the speech model (if it takes context) and the AI cleanup.
+    #[serde(default = "default_use_cursor_context")]
+    pub use_cursor_context: bool,
     #[serde(default)]
     pub mute_while_recording: bool,
     #[serde(default)]
@@ -720,6 +724,10 @@ fn default_post_process_on_dictation() -> bool {
 }
 
 fn default_live_preview() -> bool {
+    true
+}
+
+fn default_use_cursor_context() -> bool {
     true
 }
 
@@ -1106,6 +1114,7 @@ pub fn get_default_settings() -> AppSettings {
         post_process_selected_prompt_id: Some(KOEBOARD_CLEANUP_PROMPT_ID.to_string()),
         post_process_on_dictation: default_post_process_on_dictation(),
         live_preview: default_live_preview(),
+        use_cursor_context: default_use_cursor_context(),
         mute_while_recording: false,
         append_trailing_space: false,
         app_language: default_app_language(),
