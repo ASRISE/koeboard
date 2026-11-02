@@ -12,6 +12,7 @@ import { TypingToolSetting } from "../TypingTool";
 import { ClipboardHandlingSetting } from "../ClipboardHandling";
 import { AutoSubmit } from "../AutoSubmit";
 import { PostProcessingToggle } from "../PostProcessingToggle";
+import { LivePreview } from "../LivePreview";
 import { AppendTrailingSpace } from "../AppendTrailingSpace";
 import { HistoryLimit } from "../HistoryLimit";
 import { RecordingRetentionPeriodSelector } from "../RecordingRetentionPeriod";
@@ -52,6 +53,7 @@ export const AdvancedSettings: React.FC = () => {
       <SettingsGroup title={t("settings.advanced.groups.transcription")}>
         <VoiceActivityDetection descriptionMode="tooltip" grouped={true} />
         <LongFormChunking descriptionMode="tooltip" grouped={true} />
+        <LivePreview descriptionMode="tooltip" grouped={true} />
         <FillerWordRemoval descriptionMode="tooltip" grouped={true} />
         <PostProcessingToggle descriptionMode="tooltip" grouped={true} />
         <CustomWords descriptionMode="tooltip" grouped />

@@ -619,6 +619,10 @@
           "traditionalTw": "繁體（臺灣）",
           "traditionalHk": "繁體（香港）"
         }
+      },
+      "livePreview": {
+        "label": "Show text while speaking",
+        "description": "With the live overlay, show what you've said so far even when the model can't stream. Uses a little more processing while you record."
       }
     },
     "postProcessing": {

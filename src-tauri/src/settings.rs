@@ -495,6 +495,10 @@ pub struct AppSettings {
     /// only on the dedicated post-process shortcut.
     #[serde(default = "default_post_process_on_dictation")]
     pub post_process_on_dictation: bool,
+    /// Koeboard: with the live overlay, show text while recording even for a
+    /// model that can't stream, by re-decoding the recording so far.
+    #[serde(default = "default_live_preview")]
+    pub live_preview: bool,
     #[serde(default)]
     pub mute_while_recording: bool,
     #[serde(default)]
@@ -712,6 +716,10 @@ fn default_show_tray_icon() -> bool {
 }
 
 fn default_post_process_on_dictation() -> bool {
+    true
+}
+
+fn default_live_preview() -> bool {
     true
 }
 
@@ -1097,6 +1105,7 @@ pub fn get_default_settings() -> AppSettings {
         post_process_prompts: default_post_process_prompts(),
         post_process_selected_prompt_id: Some(KOEBOARD_CLEANUP_PROMPT_ID.to_string()),
         post_process_on_dictation: default_post_process_on_dictation(),
+        live_preview: default_live_preview(),
         mute_while_recording: false,
         append_trailing_space: false,
         app_language: default_app_language(),

@@ -3,6 +3,7 @@
 
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use log::{debug, error, info};
 use transcribe_cpp::StreamOptions;
@@ -14,12 +15,16 @@ use super::{
     StreamFinalizeReply, StreamPerf, TranscriptionManager,
 };
 use crate::audio_toolkit::OutputLanguageEvidence;
-use crate::engine_supervisor::{EngineError, LoadedInfo, StreamHandle, StreamProgress};
+use crate::engine_supervisor::{CancelMark, EngineError, LoadedInfo, StreamHandle, StreamProgress};
 use crate::settings::{get_settings, AppSettings};
+use transcribe_cpp::RunOptions;
 
 /// One recording's live decode.
 pub(super) struct LiveSession<'a> {
-    decoder: LiveDecoder<'a>,
+    /// `None` when only the preview runs: the recording is then transcribed
+    /// in batch when it stops.
+    decoder: Option<LiveDecoder<'a>>,
+    preview: Option<Preview<'a>>,
 }
 
 enum LiveDecoder<'a> {
@@ -36,32 +41,40 @@ impl<'a> LiveSession<'a> {
     /// Begins the live decode `mode` picks on the loaded model. `None` when
     /// there is none or it couldn't begin: the recording is then transcribed
     /// in batch when it stops.
+    ///
+    /// `preview` (Koeboard): for a model that can't stream, re-decode the
+    /// recording so far every so often and show it as tentative text.
     pub(super) fn begin(
         tm: &'a TranscriptionManager,
         mode: LiveDecode,
+        preview: bool,
         info: &LoadedInfo,
         model_id: &str,
     ) -> Option<Self> {
-        if mode == LiveDecode::None {
+        if mode == LiveDecode::None && !preview {
             return None;
         }
         // The same run setup as the batch path: task + language gated
         // against what the model actually advertises.
         let settings = get_settings(&tm.app_handle);
         let plan = tm.language_plan(&settings, model_id, info);
+        let preview = preview.then(|| {
+            let setup = tm.setup_for(info, &settings, &plan, &[]);
+            Preview::begin(tm, setup.run_options, model_id)
+        });
         let decoder = match mode {
-            LiveDecode::None => unreachable!("returned above"),
+            LiveDecode::None => None,
             LiveDecode::Stream => {
                 // A stream's language is fixed before any audio, so it can't
                 // be detected; a detect plan falls back.
                 let setup = tm.setup_for(info, &settings, &plan, &[]);
                 let stream = StreamSession::begin(tm, info, &settings, &setup, model_id)?;
-                LiveDecoder::Stream(stream, Box::new(setup))
+                Some(LiveDecoder::Stream(stream, Box::new(setup)))
             }
             LiveDecode::Chunked => {
                 info!("Live long-form chunking started (model '{}')", model_id);
                 let backend = settings.vad_backend;
-                LiveDecoder::Chunked(Box::new(ChunkedDecode::new(
+                Some(LiveDecoder::Chunked(Box::new(ChunkedDecode::new(
                     tm,
                     tm.engine.cancel_mark(),
                     ChunkSetup::Pending(Box::new(PendingSetup {
@@ -71,16 +84,20 @@ impl<'a> LiveSession<'a> {
                     })),
                     model_id,
                     backend,
-                )))
+                ))))
             }
         };
-        Some(Self { decoder })
+        Some(Self { decoder, preview })
     }
 
     pub(super) fn feed(&mut self, pcm: Vec<f32>) {
+        if let Some(preview) = &mut self.preview {
+            preview.push(&pcm);
+        }
         match &mut self.decoder {
-            LiveDecoder::Stream(stream, _) => stream.feed(pcm),
-            LiveDecoder::Chunked(chunks) => chunks.push(pcm),
+            Some(LiveDecoder::Stream(stream, _)) => stream.feed(pcm),
+            Some(LiveDecoder::Chunked(chunks)) => chunks.push(pcm),
+            None => {}
         }
     }
 
@@ -88,7 +105,8 @@ impl<'a> LiveSession<'a> {
     /// `recorded_samples` is the whole recording's length.
     pub(super) fn finish(self, recorded_samples: usize) -> StreamFinalizeReply {
         match self.decoder {
-            LiveDecoder::Stream(stream, setup) => {
+            None => Ok(None),
+            Some(LiveDecoder::Stream(stream, setup)) => {
                 Ok(stream
                     .finish()?
                     .map(|(text, model_detected_language)| RunOutcome {
@@ -97,8 +115,81 @@ impl<'a> LiveSession<'a> {
                         model_detected_language,
                     }))
             }
-            LiveDecoder::Chunked(chunks) => finish_chunks(*chunks, recorded_samples),
+            Some(LiveDecoder::Chunked(chunks)) => finish_chunks(*chunks, recorded_samples),
         }
+    }
+}
+
+/// Koeboard: a live preview for models that can't stream. Every so often the
+/// recording so far (its last [`Preview::WINDOW`]) is decoded in batch and
+/// shown as tentative text; the final text still comes from the usual decode
+/// when the recording stops.
+struct Preview<'a> {
+    tm: &'a TranscriptionManager,
+    mark: CancelMark,
+    run_options: RunOptions,
+    model_id: String,
+    audio: Vec<f32>,
+    decoded_at: usize,
+    /// Audio to gather before the next decode; grows when decoding is slow so
+    /// the preview never falls behind the microphone.
+    interval: usize,
+    stopped: bool,
+}
+
+impl<'a> Preview<'a> {
+    const SAMPLE_RATE: usize = 16_000;
+    /// Never decode more than this much of the end of the recording.
+    const WINDOW: usize = 20 * Self::SAMPLE_RATE;
+    const MIN_AUDIO: usize = Self::SAMPLE_RATE / 2;
+    const MIN_INTERVAL: usize = Self::SAMPLE_RATE * 7 / 10;
+
+    fn begin(tm: &'a TranscriptionManager, run_options: RunOptions, model_id: &str) -> Self {
+        // The overlay keeps the live card through the final decode.
+        tm.stream_active.store(true, Ordering::Release);
+        info!("Live preview by re-decoding started (model '{}')", model_id);
+        Self {
+            tm,
+            mark: tm.engine.cancel_mark(),
+            run_options,
+            model_id: model_id.to_string(),
+            audio: Vec::new(),
+            decoded_at: 0,
+            interval: Self::MIN_INTERVAL,
+            stopped: false,
+        }
+    }
+
+    fn push(&mut self, pcm: &[f32]) {
+        self.audio.extend_from_slice(pcm);
+        if self.stopped
+            || self.audio.len() < Self::MIN_AUDIO
+            || self.audio.len() - self.decoded_at < self.interval
+        {
+            return;
+        }
+        self.decoded_at = self.audio.len();
+        let window = self.audio[self.audio.len().saturating_sub(Self::WINDOW)..].to_vec();
+        let started = Instant::now();
+        match self
+            .tm
+            .run_batch(self.mark, window, &self.run_options, &self.model_id)
+        {
+            Ok(transcript) => {
+                let text = transcript.text.trim();
+                if !text.is_empty() {
+                    emit_stream_text(&self.tm.app_handle, "", text);
+                }
+            }
+            Err(e) => {
+                debug!("Live preview stopped: {}", e);
+                self.stopped = true;
+            }
+        }
+        // Wait at least twice the decode time (in audio) before the next one.
+        let took = started.elapsed().min(Duration::from_secs(10));
+        let busy = (took.as_secs_f64() * 2.0 * Self::SAMPLE_RATE as f64) as usize;
+        self.interval = busy.max(Self::MIN_INTERVAL);
     }
 }
 

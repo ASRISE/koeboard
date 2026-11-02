@@ -619,6 +619,10 @@
           "traditionalTw": "Tradizionale (Taiwan)",
           "traditionalHk": "Tradizionale (Hong Kong)"
         }
+      },
+      "livePreview": {
+        "label": "Show text while speaking",
+        "description": "With the live overlay, show what you've said so far even when the model can't stream. Uses a little more processing while you record."
       }
     },
     "postProcessing": {

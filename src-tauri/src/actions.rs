@@ -553,7 +553,12 @@ impl ShortcutAction for TranscribeAction {
             streaming: model_supports_streaming,
             long_form: false,
         };
-        if live_decode(expected_model, settings.long_form_chunking) != LiveDecode::None {
+        // Koeboard: a model that can't stream gets a live preview instead.
+        let live_preview =
+            !model_supports_streaming && crate::managers::transcription::preview_wanted(&settings);
+        if live_decode(expected_model, settings.long_form_chunking) != LiveDecode::None
+            || live_preview
+        {
             tm.start_stream();
         }
         let plan_elapsed = plan_started.elapsed();
@@ -563,7 +568,9 @@ impl ShortcutAction for TranscribeAction {
         // pill instead of an oversized transparent live window.
         let overlay_started = Instant::now();
         match settings.overlay_style {
-            OverlayStyle::Live if model_supports_streaming => utils::show_streaming_overlay(app),
+            OverlayStyle::Live if model_supports_streaming || live_preview => {
+                utils::show_streaming_overlay(app)
+            }
             OverlayStyle::Live | OverlayStyle::Minimal => show_recording_overlay(app),
             OverlayStyle::None => {} // show_overlay_state no-ops on None anyway
         }

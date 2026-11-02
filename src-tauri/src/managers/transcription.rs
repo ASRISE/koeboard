@@ -836,7 +836,10 @@ impl TranscriptionManager {
             ModelTraits::of(&info),
             get_settings(&self.app_handle).long_form_chunking,
         );
-        let Some(mut session) = LiveSession::begin(self, mode, &info, &model_id) else {
+        // Koeboard: a model that can't stream still shows text while recording
+        // when the live overlay is on.
+        let preview = !caps.supports_streaming && preview_wanted(&get_settings(&self.app_handle));
+        let Some(mut session) = LiveSession::begin(self, mode, preview, &info, &model_id) else {
             // Nothing to decode live: the recording is transcribed in batch.
             self.router.clear();
             drain_until_finalize(rx);
@@ -1367,6 +1370,12 @@ fn agreed_language(transcripts: &[Transcript]) -> Option<String> {
         .next()
         .flatten()
         .filter(|first| detected.all(|language| language.as_ref() == Some(first)))
+}
+
+/// Koeboard: whether a recording with a model that can't stream gets the live
+/// preview (the live overlay, with the preview setting on).
+pub fn preview_wanted(settings: &AppSettings) -> bool {
+    settings.live_preview && settings.overlay_style == crate::settings::OverlayStyle::Live
 }
 
 fn emit_stream_text(app_handle: &AppHandle, committed: &str, tentative: &str) {
