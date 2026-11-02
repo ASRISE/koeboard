@@ -48,5 +48,7 @@ jobs:
       target: ${{ matrix.target }}
       build-args: ${{ matrix.args }}
       upload-artifacts: true
-      sign-binaries: true
+      # Koeboard has no Apple Developer ID or Windows signing certificate yet.
+      sign-binaries: false
+      asset-prefix: "koeboard"
     secrets: inherit
