@@ -11,9 +11,7 @@
       "license": "cc-by-4.0",
       "family": "parakeet",
       "parameters": "0.6B",
-      "languages": [
-        "ja"
-      ],
+      "languages": ["ja"],
       "capabilities": {
         "streaming": false,
         "translate": false,

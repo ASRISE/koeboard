@@ -1,293 +1,707 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Koeboard：話すと、どのアプリにも文字が入る音声入力</title>
-<meta name="description" content="キーを押しながら話すと、カーソルの位置に文字が入る無料の音声入力アプリ。文字起こしはパソコンの中だけで行います。Windows・Mac・Linux 対応、日本語に強いモデル入り。">
-<meta property="og:title" content="Koeboard">
-<meta property="og:description" content="キーを押しながら話すと、どのアプリにも文字が入る無料の音声入力アプリ。">
-<meta property="og:image" content="https://asrise.github.io/koeboard/icon.png">
-<meta property="og:type" content="website">
-<link rel="icon" href="icon.png">
-<style>
-  :root {
-    --coral: #ff5a6e;
-    --coral-dark: #e8475b;
-    --ink: #1d1d22;
-    --muted: #63636e;
-    --line: #e7e5e2;
-    --paper: #fbfaf8;
-    --card: #ffffff;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --coral: #ff7a88;
-      --coral-dark: #ff8f9b;
-      --ink: #f2f1ef;
-      --muted: #a6a5ad;
-      --line: #34333a;
-      --paper: #17161b;
-      --card: #201f25;
-    }
-  }
-  * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
-  body {
-    margin: 0;
-    background: var(--paper);
-    color: var(--ink);
-    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
-    font-size: 16px;
-    line-height: 1.85;
-    line-break: strict;
-  }
-  a { color: inherit; }
-  .wrap { max-width: 880px; margin: 0 auto; padding: 0 24px; }
-
-  header .wrap { display: flex; align-items: center; justify-content: space-between; height: 68px; }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 19px; text-decoration: none; }
-  .brand img { width: 32px; height: 32px; }
-  nav { display: flex; gap: 22px; font-size: 14px; }
-  nav a { text-decoration: none; color: var(--muted); }
-  nav a:hover { color: var(--ink); }
-
-  h1, h2, h3 { word-break: keep-all; overflow-wrap: anywhere; line-height: 1.4; }
-  .hero { padding-top: 72px; padding-bottom: 40px; text-align: center; }
-  .hero h1 { font-size: clamp(30px, 5.4vw, 48px); margin: 0 0 16px; letter-spacing: 0.01em; }
-  .hero p.lead { color: var(--muted); margin: 0 auto 32px; max-width: 34em; }
-
-  .dl { display: inline-flex; flex-direction: column; align-items: center; gap: 10px; }
-  .btn {
-    display: inline-block; background: var(--coral); color: #fff; text-decoration: none;
-    font-weight: 700; padding: 14px 28px; border-radius: 12px; font-size: 17px;
-  }
-  .btn:hover { background: var(--coral-dark); }
-  .dl small { color: var(--muted); font-size: 13px; }
-  .dl small a { color: var(--muted); }
-
-  .demo {
-    margin: 56px auto 0; max-width: 620px; background: var(--card); border: 1px solid var(--line);
-    border-radius: 16px; padding: 22px 22px 26px; text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,.05);
-  }
-  .demo .bar { display: flex; gap: 6px; margin-bottom: 18px; }
-  .demo .bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
-  .field { min-height: 3.6em; font-size: 17px; }
-  .caret { display: inline-block; width: 2px; height: 1.1em; background: var(--coral); vertical-align: -0.15em; animation: blink 1s steps(1) infinite; }
-  @keyframes blink { 50% { opacity: 0; } }
-  .pill {
-    margin-top: 18px; display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted);
-    border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px 6px 8px;
-  }
-  .key {
-    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; padding: 2px 8px; border-radius: 6px;
-    border: 1px solid var(--line); border-bottom-width: 3px; background: var(--paper); color: var(--ink);
-  }
-  .pill.on .key { border-color: var(--coral); color: var(--coral); }
-  .wave { display: inline-flex; gap: 2px; align-items: center; height: 14px; }
-  .wave b { width: 3px; height: 4px; background: var(--muted); border-radius: 2px; }
-  .pill.on .wave b { background: var(--coral); animation: wave .8s ease-in-out infinite; }
-  .pill.on .wave b:nth-child(2) { animation-delay: .1s; }
-  .pill.on .wave b:nth-child(3) { animation-delay: .2s; }
-  .pill.on .wave b:nth-child(4) { animation-delay: .3s; }
-  @keyframes wave { 50% { height: 14px; } }
-  @media (prefers-reduced-motion: reduce) { .caret, .pill.on .wave b { animation: none; } }
-
-  section { padding: 56px 0; border-top: 1px solid var(--line); }
-  section h2 { font-size: 26px; margin: 0 0 24px; }
-  .steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; counter-reset: s; }
-  .steps li { counter-increment: s; display: grid; grid-template-columns: 34px 1fr; gap: 12px; }
-  .steps li::before {
-    content: counter(s); width: 28px; height: 28px; border-radius: 50%; background: var(--coral); color: #fff;
-    font-weight: 700; font-size: 14px; display: grid; place-items: center; margin-top: 2px;
-  }
-  .features { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-  @media (max-width: 640px) { .features { grid-template-columns: 1fr; } }
-  .feature { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; }
-  .feature h3 { margin: 0 0 6px; font-size: 18px; }
-  .feature p { margin: 0; color: var(--muted); font-size: 15px; }
-
-  .platforms { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
-  .platform { border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; background: var(--card); }
-  .platform h3 { margin: 0 0 8px; font-size: 17px; }
-  .platform ul { margin: 0; padding-left: 1.2em; font-size: 15px; }
-  .platform li { margin: 2px 0; }
-  .note { color: var(--muted); font-size: 14px; margin-top: 18px; }
-
-  dl.faq dt { font-weight: 700; margin-top: 22px; }
-  dl.faq dd { margin: 6px 0 0; color: var(--muted); }
-
-  footer { border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--muted); font-size: 13px; }
-  footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 22px; justify-content: space-between; }
-  footer nav { font-size: 13px; }
-  kbd { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .85em; padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; background: var(--card); }
-  @media (max-width: 560px) { nav.top a.hide-sm { display: none; } .hero { padding-top: 48px; } .btn { font-size: 16px; padding: 13px 22px; } }
-</style>
-</head>
-<body>
-<header>
-  <div class="wrap">
-    <a class="brand" href="./"><img src="icon.png" alt="">Koeboard</a>
-    <nav class="top">
-      <a href="#download">ダウンロード</a>
-      <a class="hide-sm" href="#faq">よくある質問</a>
-      <a href="https://github.com/ASRISE/koeboard">GitHub</a>
-    </nav>
-  </div>
-</header>
-
-<main>
-  <div class="hero wrap">
-    <h1>話すと、<wbr>どのアプリにも<wbr>文字が入る</h1>
-    <p class="lead">キーを押しながら話して、離すだけ。カーソルのある場所に文字が入ります。文字起こしはパソコンの中だけで行うので、声が外に送られることはありません。無料で、ソースコードも公開しています。</p>
-    <div class="dl">
-      <a class="btn" id="dl-btn" href="https://github.com/ASRISE/koeboard/releases/latest">ダウンロード</a>
-      <small id="dl-note">Windows・Mac・Linux 対応　<a href="#download">ほかの種類</a></small>
-    </div>
-
-    <div class="demo" aria-hidden="true">
-      <div class="bar"><i></i><i></i><i></i></div>
-      <div class="field"><span id="typed"></span><span class="caret"></span></div>
-      <div class="pill" id="pill"><span class="key" id="key-label">Option + Space</span><span class="wave"><b></b><b></b><b></b><b></b></span><span id="pill-text">押しながら話す</span></div>
-    </div>
-  </div>
-
-  <section>
-    <div class="wrap">
-      <h2>使い方</h2>
-      <ol class="steps">
-        <li><div>文字を入れたい場所（メール、チャット、メモなど）をクリックします。</div></li>
-        <li><div>録音キーを押しながら話します。最初は Mac が <kbd>Option</kbd>＋<kbd>Space</kbd>、Windows と Linux が <kbd>Ctrl</kbd>＋<kbd>Space</kbd> です。設定で好きなキーに変えられます。</div></li>
-        <li><div>キーを離すと、話した内容がその場所に入ります。「えーと」「あのー」は取り除かれます。</div></li>
-      </ol>
-    </div>
-  </section>
-
-  <section>
-    <div class="wrap">
-      <h2>特徴</h2>
-      <div class="features">
-        <div class="feature"><h3>日本語に強い</h3><p>NVIDIA の日本語専用モデル「Parakeet TDT-CTC 日本語」を最初から選べます。Whisper など、ほかのモデルにも切り替えられます。</p></div>
-        <div class="feature"><h3>声が外に出ない</h3><p>文字起こしはすべてパソコンの中で行います。インターネットにつながっていなくても使えます。</p></div>
-        <div class="feature"><h3>無料で使える</h3><p>料金も登録も要りません。ソースコードは MIT ライセンスで公開しています。</p></div>
-        <div class="feature"><h3>どのアプリでも使える</h3><p>文字を入れられる場所なら、ブラウザでもチャットでもエディタでも使えます。</p></div>
-      </div>
-    </div>
-  </section>
-
-  <section id="download">
-    <div class="wrap">
-      <h2>ダウンロード</h2>
-      <div class="platforms">
-        <div class="platform">
-          <h3>Windows</h3>
-          <ul>
-            <li><a data-asset="x64-setup.exe" href="https://github.com/ASRISE/koeboard/releases/latest">ふつうのパソコン（x64）</a></li>
-            <li><a data-asset="arm64-setup.exe" href="https://github.com/ASRISE/koeboard/releases/latest">ARM のパソコン</a></li>
-          </ul>
-        </div>
-        <div class="platform">
-          <h3>Mac</h3>
-          <ul>
-            <li><a data-asset="aarch64.dmg" href="https://github.com/ASRISE/koeboard/releases/latest">Apple シリコン（M1 以降）</a></li>
-            <li><a data-asset="x64.dmg" href="https://github.com/ASRISE/koeboard/releases/latest">Intel の Mac</a></li>
-          </ul>
-        </div>
-        <div class="platform">
-          <h3>Linux</h3>
-          <ul>
-            <li><a data-asset="amd64.AppImage" href="https://github.com/ASRISE/koeboard/releases/latest">AppImage（x86_64）</a></li>
-            <li><a data-asset="amd64.deb" href="https://github.com/ASRISE/koeboard/releases/latest">deb（x86_64）</a></li>
-            <li><a href="https://github.com/ASRISE/koeboard/releases/latest">rpm・ARM 版はこちら</a></li>
-          </ul>
-        </div>
-      </div>
-      <p class="note" id="version-note">いまの版：<a href="https://github.com/ASRISE/koeboard/releases/latest">リリースの一覧</a>を見てください。</p>
-    </div>
-  </section>
-
-  <section id="faq">
-    <div class="wrap">
-      <h2>よくある質問</h2>
-      <dl class="faq">
-        <dt>初めて開くときに警告が出ます</dt>
-        <dd>まだ開発元の証明書で署名していないためです。Windows で「Windows によって PC が保護されました」と出たら「詳細情報」→「実行」を押してください。Mac で開けないと出たら、システム設定の「プライバシーとセキュリティ」で「このまま開く」を押してください。</dd>
-        <dt>最初に何をダウンロードしますか</dt>
-        <dd>文字起こしに使うモデルです。日本語の Parakeet は約 730 MB あります。一度ダウンロードすれば、あとはインターネットなしで使えます。</dd>
-        <dt>Mac で文字が入りません</dt>
-        <dd>システム設定の「プライバシーとセキュリティ」で、Koeboard にマイクとアクセシビリティを許可してください。許可したあと、Koeboard を一度終了して開き直すと使えるようになります。</dd>
-        <dt>Handy とはどう違いますか</dt>
-        <dd>Koeboard は、オープンソースの音声入力アプリ <a href="https://handy.computer/">Handy</a> をもとにしています。日本語専用のモデルと、日本語の「えーと」などを取り除く機能を足しています。</dd>
-        <dt>声や文字はどこかに送られますか</dt>
-        <dd>送られません。録音と文字起こしはパソコンの中だけで行います。インターネットを使うのは、モデルのダウンロードと、新しい版の確認のときだけです。</dd>
-      </dl>
-    </div>
-  </section>
-</main>
-
-<footer>
-  <div class="wrap">
-    <span>Koeboard は MIT ライセンスのオープンソースです。<a href="https://github.com/cjpais/handy">Handy</a> をもとにしています。日本語モデルは NVIDIA の <a href="https://huggingface.co/nvidia/parakeet-tdt_ctc-0.6b-ja">parakeet-tdt_ctc-0.6b-ja</a>（CC-BY-4.0）を変換したものです。</span>
-    <nav>
-      <a href="https://github.com/ASRISE/koeboard">GitHub</a>
-      <a href="https://github.com/ASRISE/koeboard/issues">不具合の報告</a>
-      <a href="https://huggingface.co/ASRISEx">Hugging Face</a>
-    </nav>
-  </div>
-</footer>
-
-<script>
-(() => {
-  const ua = navigator.userAgent;
-  const os = /Windows/i.test(ua) ? "windows" : /Mac/i.test(ua) ? "mac" : /Linux/i.test(ua) && !/Android/i.test(ua) ? "linux" : null;
-  const keyLabel = os === "mac" ? "Option + Space" : "Ctrl + Space";
-  document.getElementById("key-label").textContent = keyLabel;
-
-  // Demo: hold the key, speak, release, text appears.
-  const lines = ["明日の会議は 10 時からに変更になりました。資料は午前中に送ります。", "了解です。駅に着いたら連絡しますね。", "このバグは、設定を開き直すと直ることがあります。"];
-  const typed = document.getElementById("typed");
-  const pill = document.getElementById("pill");
-  const pillText = document.getElementById("pill-text");
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let i = 0;
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  async function loop() {
-    if (reduce) { typed.textContent = lines[0]; return; }
-    for (;;) {
-      typed.textContent = "";
-      pill.classList.add("on"); pillText.textContent = "話しています";
-      await sleep(2200);
-      pill.classList.remove("on"); pillText.textContent = "文字にしています";
-      await sleep(500);
-      const text = lines[i++ % lines.length];
-      for (const ch of text) { typed.textContent += ch; await sleep(18); }
-      pillText.textContent = "押しながら話す";
-      await sleep(3200);
-    }
-  }
-  loop();
-
-  // Point the download links at the latest release's files.
-  fetch("https://api.github.com/repos/ASRISE/koeboard/releases/latest")
-    .then((r) => (r.ok ? r.json() : Promise.reject()))
-    .then((rel) => {
-      const find = (suffix) => rel.assets.find((a) => a.name.endsWith(suffix) && !a.name.endsWith(".sig"));
-      document.querySelectorAll("a[data-asset]").forEach((a) => {
-        const asset = find("_" + a.dataset.asset);
-        if (asset) a.href = asset.browser_download_url;
-      });
-      const pick = os === "windows" ? ["x64-setup.exe", "Windows 版"] : os === "mac" ? ["aarch64.dmg", "Mac 版"] : os === "linux" ? ["amd64.AppImage", "Linux 版"] : null;
-      const asset = pick && find("_" + pick[0]);
-      if (asset) {
-        const btn = document.getElementById("dl-btn");
-        btn.href = asset.browser_download_url;
-        btn.textContent = pick[1] + "をダウンロード";
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Koeboard：話すと、どのアプリにも文字が入る音声入力</title>
+    <meta
+      name="description"
+      content="キーを押しながら話すと、カーソルの位置に文字が入る無料の音声入力アプリ。文字起こしはパソコンの中だけで行います。Windows・Mac・Linux 対応、日本語に強いモデル入り。"
+    />
+    <meta property="og:title" content="Koeboard" />
+    <meta
+      property="og:description"
+      content="キーを押しながら話すと、どのアプリにも文字が入る無料の音声入力アプリ。"
+    />
+    <meta
+      property="og:image"
+      content="https://asrise.github.io/koeboard/icon.png"
+    />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="icon.png" />
+    <style>
+      :root {
+        --coral: #ff5a6e;
+        --coral-dark: #e8475b;
+        --ink: #1d1d22;
+        --muted: #63636e;
+        --line: #e7e5e2;
+        --paper: #fbfaf8;
+        --card: #ffffff;
       }
-      const v = rel.tag_name.replace(/^v/, "");
-      document.getElementById("version-note").textContent = "いまの版：" + v;
-    })
-    .catch(() => {});
-})();
-</script>
-</body>
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --coral: #ff7a88;
+          --coral-dark: #ff8f9b;
+          --ink: #f2f1ef;
+          --muted: #a6a5ad;
+          --line: #34333a;
+          --paper: #17161b;
+          --card: #201f25;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family:
+          "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP",
+          "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+        font-size: 16px;
+        line-height: 1.85;
+        line-break: strict;
+      }
+      a {
+        color: inherit;
+      }
+      .wrap {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      header .wrap {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 68px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 19px;
+        text-decoration: none;
+      }
+      .brand img {
+        width: 32px;
+        height: 32px;
+      }
+      nav {
+        display: flex;
+        gap: 22px;
+        font-size: 14px;
+      }
+      nav a {
+        text-decoration: none;
+        color: var(--muted);
+      }
+      nav a:hover {
+        color: var(--ink);
+      }
+
+      h1,
+      h2,
+      h3 {
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+        line-height: 1.4;
+      }
+      .hero {
+        padding-top: 72px;
+        padding-bottom: 40px;
+        text-align: center;
+      }
+      .hero h1 {
+        font-size: clamp(30px, 5.4vw, 48px);
+        margin: 0 0 16px;
+        letter-spacing: 0.01em;
+      }
+      .hero p.lead {
+        color: var(--muted);
+        margin: 0 auto 32px;
+        max-width: 34em;
+      }
+
+      .dl {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+      .btn {
+        display: inline-block;
+        background: var(--coral);
+        color: #fff;
+        text-decoration: none;
+        font-weight: 700;
+        padding: 14px 28px;
+        border-radius: 12px;
+        font-size: 17px;
+      }
+      .btn:hover {
+        background: var(--coral-dark);
+      }
+      .dl small {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .dl small a {
+        color: var(--muted);
+      }
+
+      .demo {
+        margin: 56px auto 0;
+        max-width: 620px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 22px 22px 26px;
+        text-align: left;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+      }
+      .demo .bar {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 18px;
+      }
+      .demo .bar i {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--line);
+      }
+      .field {
+        min-height: 3.6em;
+        font-size: 17px;
+      }
+      .caret {
+        display: inline-block;
+        width: 2px;
+        height: 1.1em;
+        background: var(--coral);
+        vertical-align: -0.15em;
+        animation: blink 1s steps(1) infinite;
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+      .pill {
+        margin-top: 18px;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+        color: var(--muted);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 6px 14px 6px 8px;
+      }
+      .key {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 6px;
+        border: 1px solid var(--line);
+        border-bottom-width: 3px;
+        background: var(--paper);
+        color: var(--ink);
+      }
+      .pill.on .key {
+        border-color: var(--coral);
+        color: var(--coral);
+      }
+      .wave {
+        display: inline-flex;
+        gap: 2px;
+        align-items: center;
+        height: 14px;
+      }
+      .wave b {
+        width: 3px;
+        height: 4px;
+        background: var(--muted);
+        border-radius: 2px;
+      }
+      .pill.on .wave b {
+        background: var(--coral);
+        animation: wave 0.8s ease-in-out infinite;
+      }
+      .pill.on .wave b:nth-child(2) {
+        animation-delay: 0.1s;
+      }
+      .pill.on .wave b:nth-child(3) {
+        animation-delay: 0.2s;
+      }
+      .pill.on .wave b:nth-child(4) {
+        animation-delay: 0.3s;
+      }
+      @keyframes wave {
+        50% {
+          height: 14px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .caret,
+        .pill.on .wave b {
+          animation: none;
+        }
+      }
+
+      section {
+        padding: 56px 0;
+        border-top: 1px solid var(--line);
+      }
+      section h2 {
+        font-size: 26px;
+        margin: 0 0 24px;
+      }
+      .steps {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        gap: 14px;
+        counter-reset: s;
+      }
+      .steps li {
+        counter-increment: s;
+        display: grid;
+        grid-template-columns: 34px 1fr;
+        gap: 12px;
+      }
+      .steps li::before {
+        content: counter(s);
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--coral);
+        color: #fff;
+        font-weight: 700;
+        font-size: 14px;
+        display: grid;
+        place-items: center;
+        margin-top: 2px;
+      }
+      .features {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+      @media (max-width: 640px) {
+        .features {
+          grid-template-columns: 1fr;
+        }
+      }
+      .feature {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 20px 22px;
+      }
+      .feature h3 {
+        margin: 0 0 6px;
+        font-size: 18px;
+      }
+      .feature p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      .platforms {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+      }
+      .platform {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 18px 20px;
+        background: var(--card);
+      }
+      .platform h3 {
+        margin: 0 0 8px;
+        font-size: 17px;
+      }
+      .platform ul {
+        margin: 0;
+        padding-left: 1.2em;
+        font-size: 15px;
+      }
+      .platform li {
+        margin: 2px 0;
+      }
+      .note {
+        color: var(--muted);
+        font-size: 14px;
+        margin-top: 18px;
+      }
+
+      dl.faq dt {
+        font-weight: 700;
+        margin-top: 22px;
+      }
+      dl.faq dd {
+        margin: 6px 0 0;
+        color: var(--muted);
+      }
+
+      footer {
+        border-top: 1px solid var(--line);
+        padding: 32px 0 48px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      footer .wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 22px;
+        justify-content: space-between;
+      }
+      footer nav {
+        font-size: 13px;
+      }
+      kbd {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 0.85em;
+        padding: 1px 6px;
+        border: 1px solid var(--line);
+        border-bottom-width: 2px;
+        border-radius: 5px;
+        background: var(--card);
+      }
+      @media (max-width: 560px) {
+        nav.top a.hide-sm {
+          display: none;
+        }
+        .hero {
+          padding-top: 48px;
+        }
+        .btn {
+          font-size: 16px;
+          padding: 13px 22px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <a class="brand" href="./"><img src="icon.png" alt="" />Koeboard</a>
+        <nav class="top">
+          <a href="#download">ダウンロード</a>
+          <a class="hide-sm" href="#faq">よくある質問</a>
+          <a href="https://github.com/ASRISE/koeboard">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <div class="hero wrap">
+        <h1>話すと、<wbr />どのアプリにも<wbr />文字が入る</h1>
+        <p class="lead">
+          キーを押しながら話して、離すだけ。カーソルのある場所に文字が入ります。文字起こしはパソコンの中だけで行うので、声が外に送られることはありません。無料で、ソースコードも公開しています。
+        </p>
+        <div class="dl">
+          <a
+            class="btn"
+            id="dl-btn"
+            href="https://github.com/ASRISE/koeboard/releases/latest"
+            >ダウンロード</a
+          >
+          <small id="dl-note"
+            >Windows・Mac・Linux 対応　<a href="#download">ほかの種類</a></small
+          >
+        </div>
+
+        <div class="demo" aria-hidden="true">
+          <div class="bar"><i></i><i></i><i></i></div>
+          <div class="field">
+            <span id="typed"></span><span class="caret"></span>
+          </div>
+          <div class="pill" id="pill">
+            <span class="key" id="key-label">Option + Space</span
+            ><span class="wave"><b></b><b></b><b></b><b></b></span
+            ><span id="pill-text">押しながら話す</span>
+          </div>
+        </div>
+      </div>
+
+      <section>
+        <div class="wrap">
+          <h2>使い方</h2>
+          <ol class="steps">
+            <li>
+              <div>
+                文字を入れたい場所（メール、チャット、メモなど）をクリックします。
+              </div>
+            </li>
+            <li>
+              <div>
+                録音キーを押しながら話します。最初は Mac が
+                <kbd>Option</kbd>＋<kbd>Space</kbd>、Windows と Linux が
+                <kbd>Ctrl</kbd>＋<kbd>Space</kbd>
+                です。設定で好きなキーに変えられます。
+              </div>
+            </li>
+            <li>
+              <div>
+                キーを離すと、話した内容がその場所に入ります。「えーと」「あのー」は取り除かれます。
+              </div>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <h2>特徴</h2>
+          <div class="features">
+            <div class="feature">
+              <h3>日本語に強い</h3>
+              <p>
+                NVIDIA の日本語専用モデル「Parakeet TDT-CTC
+                日本語」を最初から選べます。Whisper
+                など、ほかのモデルにも切り替えられます。
+              </p>
+            </div>
+            <div class="feature">
+              <h3>声が外に出ない</h3>
+              <p>
+                文字起こしはすべてパソコンの中で行います。インターネットにつながっていなくても使えます。
+              </p>
+            </div>
+            <div class="feature">
+              <h3>無料で使える</h3>
+              <p>
+                料金も登録も要りません。ソースコードは MIT
+                ライセンスで公開しています。
+              </p>
+            </div>
+            <div class="feature">
+              <h3>どのアプリでも使える</h3>
+              <p>
+                文字を入れられる場所なら、ブラウザでもチャットでもエディタでも使えます。
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="download">
+        <div class="wrap">
+          <h2>ダウンロード</h2>
+          <div class="platforms">
+            <div class="platform">
+              <h3>Windows</h3>
+              <ul>
+                <li>
+                  <a
+                    data-asset="x64-setup.exe"
+                    href="https://github.com/ASRISE/koeboard/releases/latest"
+                    >ふつうのパソコン（x64）</a
+                  >
+                </li>
+                <li>
+                  <a
+                    data-asset="arm64-setup.exe"
+                    href="https://github.com/ASRISE/koeboard/releases/latest"
+                    >ARM のパソコン</a
+                  >
+                </li>
+              </ul>
+            </div>
+            <div class="platform">
+              <h3>Mac</h3>
+              <ul>
+                <li>
+                  <a
+                    data-asset="aarch64.dmg"
+                    href="https://github.com/ASRISE/koeboard/releases/latest"
+                    >Apple シリコン（M1 以降）</a
+                  >
+                </li>
+                <li>
+                  <a
+                    data-asset="x64.dmg"
+                    href="https://github.com/ASRISE/koeboard/releases/latest"
+                    >Intel の Mac</a
+                  >
+                </li>
+              </ul>
+            </div>
+            <div class="platform">
+              <h3>Linux</h3>
+              <ul>
+                <li>
+                  <a
+                    data-asset="amd64.AppImage"
+                    href="https://github.com/ASRISE/koeboard/releases/latest"
+                    >AppImage（x86_64）</a
+                  >
+                </li>
+                <li>
+                  <a
+                    data-asset="amd64.deb"
+                    href="https://github.com/ASRISE/koeboard/releases/latest"
+                    >deb（x86_64）</a
+                  >
+                </li>
+                <li>
+                  <a href="https://github.com/ASRISE/koeboard/releases/latest"
+                    >rpm・ARM 版はこちら</a
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+          <p class="note" id="version-note">
+            いまの版：<a
+              href="https://github.com/ASRISE/koeboard/releases/latest"
+              >リリースの一覧</a
+            >を見てください。
+          </p>
+        </div>
+      </section>
+
+      <section id="faq">
+        <div class="wrap">
+          <h2>よくある質問</h2>
+          <dl class="faq">
+            <dt>初めて開くときに警告が出ます</dt>
+            <dd>
+              まだ開発元の証明書で署名していないためです。Windows で「Windows
+              によって PC
+              が保護されました」と出たら「詳細情報」→「実行」を押してください。Mac
+              で開けないと出たら、システム設定の「プライバシーとセキュリティ」で「このまま開く」を押してください。
+            </dd>
+            <dt>最初に何をダウンロードしますか</dt>
+            <dd>
+              文字起こしに使うモデルです。日本語の Parakeet は約 730 MB
+              あります。一度ダウンロードすれば、あとはインターネットなしで使えます。
+            </dd>
+            <dt>Mac で文字が入りません</dt>
+            <dd>
+              システム設定の「プライバシーとセキュリティ」で、Koeboard
+              にマイクとアクセシビリティを許可してください。許可したあと、Koeboard
+              を一度終了して開き直すと使えるようになります。
+            </dd>
+            <dt>Handy とはどう違いますか</dt>
+            <dd>
+              Koeboard は、オープンソースの音声入力アプリ
+              <a href="https://handy.computer/">Handy</a>
+              をもとにしています。日本語専用のモデルと、日本語の「えーと」などを取り除く機能を足しています。
+            </dd>
+            <dt>声や文字はどこかに送られますか</dt>
+            <dd>
+              送られません。録音と文字起こしはパソコンの中だけで行います。インターネットを使うのは、モデルのダウンロードと、新しい版の確認のときだけです。
+            </dd>
+          </dl>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <span
+          >Koeboard は MIT ライセンスのオープンソースです。<a
+            href="https://github.com/cjpais/handy"
+            >Handy</a
+          >
+          をもとにしています。日本語モデルは NVIDIA の
+          <a href="https://huggingface.co/nvidia/parakeet-tdt_ctc-0.6b-ja"
+            >parakeet-tdt_ctc-0.6b-ja</a
+          >（CC-BY-4.0）を変換したものです。</span
+        >
+        <nav>
+          <a href="https://github.com/ASRISE/koeboard">GitHub</a>
+          <a href="https://github.com/ASRISE/koeboard/issues">不具合の報告</a>
+          <a href="https://huggingface.co/ASRISEx">Hugging Face</a>
+        </nav>
+      </div>
+    </footer>
+
+    <script>
+      (() => {
+        const ua = navigator.userAgent;
+        const os = /Windows/i.test(ua)
+          ? "windows"
+          : /Mac/i.test(ua)
+            ? "mac"
+            : /Linux/i.test(ua) && !/Android/i.test(ua)
+              ? "linux"
+              : null;
+        const keyLabel = os === "mac" ? "Option + Space" : "Ctrl + Space";
+        document.getElementById("key-label").textContent = keyLabel;
+
+        // Demo: hold the key, speak, release, text appears.
+        const lines = [
+          "明日の会議は 10 時からに変更になりました。資料は午前中に送ります。",
+          "了解です。駅に着いたら連絡しますね。",
+          "このバグは、設定を開き直すと直ることがあります。",
+        ];
+        const typed = document.getElementById("typed");
+        const pill = document.getElementById("pill");
+        const pillText = document.getElementById("pill-text");
+        const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+        let i = 0;
+        const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+        async function loop() {
+          if (reduce) {
+            typed.textContent = lines[0];
+            return;
+          }
+          for (;;) {
+            typed.textContent = "";
+            pill.classList.add("on");
+            pillText.textContent = "話しています";
+            await sleep(2200);
+            pill.classList.remove("on");
+            pillText.textContent = "文字にしています";
+            await sleep(500);
+            const text = lines[i++ % lines.length];
+            for (const ch of text) {
+              typed.textContent += ch;
+              await sleep(18);
+            }
+            pillText.textContent = "押しながら話す";
+            await sleep(3200);
+          }
+        }
+        loop();
+
+        // Point the download links at the latest release's files.
+        fetch("https://api.github.com/repos/ASRISE/koeboard/releases/latest")
+          .then((r) => (r.ok ? r.json() : Promise.reject()))
+          .then((rel) => {
+            const find = (suffix) =>
+              rel.assets.find(
+                (a) => a.name.endsWith(suffix) && !a.name.endsWith(".sig"),
+              );
+            document.querySelectorAll("a[data-asset]").forEach((a) => {
+              const asset = find("_" + a.dataset.asset);
+              if (asset) a.href = asset.browser_download_url;
+            });
+            const pick =
+              os === "windows"
+                ? ["x64-setup.exe", "Windows 版"]
+                : os === "mac"
+                  ? ["aarch64.dmg", "Mac 版"]
+                  : os === "linux"
+                    ? ["amd64.AppImage", "Linux 版"]
+                    : null;
+            const asset = pick && find("_" + pick[0]);
+            if (asset) {
+              const btn = document.getElementById("dl-btn");
+              btn.href = asset.browser_download_url;
+              btn.textContent = pick[1] + "をダウンロード";
+            }
+            const v = rel.tag_name.replace(/^v/, "");
+            document.getElementById("version-note").textContent =
+              "いまの版：" + v;
+          })
+          .catch(() => {});
+      })();
+    </script>
+  </body>
 </html>
