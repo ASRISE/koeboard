@@ -16,6 +16,7 @@ use super::{
 };
 use crate::audio_toolkit::OutputLanguageEvidence;
 use crate::engine_supervisor::{CancelMark, EngineError, LoadedInfo, StreamHandle, StreamProgress};
+use crate::language_detection::{LanguageSource, Plan};
 use crate::settings::{get_settings, AppSettings};
 use transcribe_cpp::RunOptions;
 
@@ -60,7 +61,14 @@ impl<'a> LiveSession<'a> {
         let plan = tm.language_plan(&settings, model_id, info);
         let preview = preview.then(|| {
             let setup = tm.setup_for(info, &settings, &plan, &[]);
-            Preview::begin(tm, setup.run_options, model_id)
+            // Auto language: the language is detected from the speech once
+            // there is enough of it, as the final decode does. Until then a
+            // multilingual model would guess from a fraction of a second of
+            // audio (Japanese came out as Chinese).
+            let detect = plan
+                .detects()
+                .then(|| Box::new((info.clone(), settings.clone(), plan.clone())));
+            Preview::begin(tm, setup.run_options, detect, model_id)
         });
         let decoder = match mode {
             LiveDecode::None => None,
@@ -128,6 +136,8 @@ struct Preview<'a> {
     tm: &'a TranscriptionManager,
     mark: CancelMark,
     run_options: RunOptions,
+    /// Set while the language is still to be detected (Auto).
+    detect: Option<Box<(LoadedInfo, AppSettings, Plan)>>,
     model_id: String,
     audio: Vec<f32>,
     decoded_at: usize,
@@ -144,7 +154,12 @@ impl<'a> Preview<'a> {
     const MIN_AUDIO: usize = Self::SAMPLE_RATE / 2;
     const MIN_INTERVAL: usize = Self::SAMPLE_RATE * 7 / 10;
 
-    fn begin(tm: &'a TranscriptionManager, run_options: RunOptions, model_id: &str) -> Self {
+    fn begin(
+        tm: &'a TranscriptionManager,
+        run_options: RunOptions,
+        detect: Option<Box<(LoadedInfo, AppSettings, Plan)>>,
+        model_id: &str,
+    ) -> Self {
         // The overlay keeps the live card through the final decode.
         tm.stream_active.store(true, Ordering::Release);
         info!("Live preview by re-decoding started (model '{}')", model_id);
@@ -152,6 +167,7 @@ impl<'a> Preview<'a> {
             tm,
             mark: tm.engine.cancel_mark(),
             run_options,
+            detect,
             model_id: model_id.to_string(),
             audio: Vec::new(),
             decoded_at: 0,
@@ -169,6 +185,9 @@ impl<'a> Preview<'a> {
             return;
         }
         self.decoded_at = self.audio.len();
+        if !self.language_ready() {
+            return;
+        }
         let window = self.audio[self.audio.len().saturating_sub(Self::WINDOW)..].to_vec();
         let started = Instant::now();
         match self
@@ -190,6 +209,31 @@ impl<'a> Preview<'a> {
         let took = started.elapsed().min(Duration::from_secs(10));
         let busy = (took.as_secs_f64() * 2.0 * Self::SAMPLE_RATE as f64) as usize;
         self.interval = busy.max(Self::MIN_INTERVAL);
+    }
+}
+
+impl Preview<'_> {
+    /// Detect the language from the speech so far, if it isn't known yet.
+    /// `false` while there isn't enough speech to tell and the model would
+    /// otherwise pick the language itself.
+    fn language_ready(&mut self) -> bool {
+        let Some(detect) = &self.detect else {
+            return true;
+        };
+        let (info, settings, plan) = detect.as_ref();
+        let setup = self.tm.setup_for(info, settings, plan, &self.audio);
+        let detected = setup.language.source == LanguageSource::Detected;
+        let known = setup.language.language.is_some();
+        // Past the detection window more audio won't help (no detector,
+        // or it couldn't tell): use the fallback for good.
+        let give_up = self.audio.len() >= settings.language_detection_window_samples();
+        if detected || known || give_up {
+            self.run_options = setup.run_options;
+        }
+        if detected || give_up {
+            self.detect = None;
+        }
+        detected || known || give_up
     }
 }
 
