@@ -224,16 +224,17 @@ impl Preview<'_> {
         let setup = self.tm.setup_for(info, settings, plan, &self.audio);
         let detected = setup.language.source == LanguageSource::Detected;
         let known = setup.language.language.is_some();
-        // Past the detection window more audio won't help (no detector,
-        // or it couldn't tell): use the fallback for good.
-        let give_up = self.audio.len() >= settings.language_detection_window_samples();
-        if detected || known || give_up {
+        // Detect again on each decode until the detection window is full:
+        // the first second of speech is often too little to tell. Past it
+        // the final decode decides the same way.
+        let window_full = self.audio.len() >= settings.language_detection_window_samples();
+        if detected || known || window_full {
             self.run_options = setup.run_options;
         }
-        if detected || give_up {
+        if window_full {
             self.detect = None;
         }
-        detected || known || give_up
+        detected || known || window_full
     }
 }
 

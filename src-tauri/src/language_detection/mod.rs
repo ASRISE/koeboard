@@ -68,6 +68,11 @@ pub fn status_for(
 /// The detector rejects less speech than this (`InputTooShort`).
 const MIN_SPEECH_SAMPLES: usize = 16_000 / 2;
 
+/// Koeboard: when the detector gives the languages the person speaks less
+/// than this share in all, it heard something else (a short "あ" scored as
+/// Chinese), and the pick among them is a coin toss: use the fallback.
+const MIN_ALLOWED_MASS: f32 = 0.1;
+
 /// A pick less than this many times as likely as the runner-up is logged as
 /// uncertain (with two languages: p < 0.6). It is used either way.
 const UNSURE_RATIO: f32 = 1.5;
@@ -229,6 +234,10 @@ impl Plan {
             identified.allowed_mass * 100.0,
             identified.elapsed.as_millis()
         );
+        if identified.allowed_mass < MIN_ALLOWED_MASS {
+            info!("Language detection: none of the allowed languages is likely; {transcribing_as}");
+            return fallback_decision;
+        }
         match language {
             Some(language) => LanguageDecision {
                 language: Some(language),
@@ -279,6 +288,19 @@ mod tests {
         });
         assert_eq!(decision.language.as_deref(), Some("he"));
         assert_eq!(decision.source, LanguageSource::Detected);
+    }
+
+    #[test]
+    fn falls_back_when_no_allowed_language_is_likely() {
+        let decision = detect(DetectFallback::FirstLanguage).decide(Some(&SPEECH), |_, _| {
+            Ok(Identified {
+                candidates: vec![("en".into(), 0.006), ("iw".into(), 0.001)],
+                allowed_mass: 0.007,
+                elapsed: Duration::ZERO,
+            })
+        });
+        assert_eq!(decision.language.as_deref(), Some("he"));
+        assert_eq!(decision.source, LanguageSource::Fallback);
     }
 
     #[test]
